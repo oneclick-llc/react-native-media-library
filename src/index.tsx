@@ -269,7 +269,7 @@ export const mediaLibrary = {
           mainImageIndex: params.mainImageIndex,
           backgroundColor: params.backgroundColor
             ? processColor(params.backgroundColor)
-            : undefined,
+            : processColor('transparent'),
         },
         resolve
       );
