@@ -1,6 +1,6 @@
 {
   "name": "react-native-media-library2",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "E",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
@@ -143,16 +143,11 @@
   },
   "codegenConfig": {
     "name": "RNMediaLibrarySpec",
-    "type": "all",
+    "type": "modules",
     "jsSrcsDir": "src",
-    "outputDir": {
-      "ios": "ios/generated",
-      "android": "android/generated"
-    },
     "android": {
       "javaPackageName": "com.medialibrary"
-    },
-    "includesGeneratedCode": true
+    }
   },
   "create-react-native-library": {
     "type": "module-new",
