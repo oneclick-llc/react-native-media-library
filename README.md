@@ -1,6 +1,6 @@
 # react-native-media-library
 
-E
+Photo library access
 
 ## Installation
 

@@ -7,7 +7,7 @@ export default function App() {
       <TouchableOpacity
         onPress={async () => {
           const response = await mediaLibrary.getAssets();
-          console.log('🍓[App.re]', response);
+          console.log('🍓[App.response]', response);
         }}
       >
         <Text>Press</Text>
@@ -15,7 +15,7 @@ export default function App() {
       <TouchableOpacity
         onPress={async () => {
           const response = mediaLibrary.cacheDir;
-          console.log('🍓[App.re]', response);
+          console.log('🍓[App.response]', response);
         }}
       >
         <Text>Cache</Text>
@@ -27,7 +27,7 @@ export default function App() {
             extensions: [],
             path: `${mediaLibrary.cacheDir}`,
           });
-          console.log('🍓[App.re]', response);
+          console.log('🍓[App.response]', response);
         }}
       >
         <Text>get from disk</Text>
@@ -36,7 +36,7 @@ export default function App() {
       <TouchableOpacity
         onPress={async () => {
           const response = await mediaLibrary.getCollections();
-          console.log('🍓[App.re]', response);
+          console.log('🍓[App.response]', response);
         }}
       >
         <Text>getCollections</Text>
@@ -47,7 +47,7 @@ export default function App() {
           console.log('🍓[App.assets]', assets);
           if (assets.length > 0) {
             const response = await mediaLibrary.getAsset(assets[0]!.id);
-            console.log('🍓[App.re]', response);
+            console.log('🍓[App.response]', response);
           }
         }}
       >

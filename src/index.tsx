@@ -5,6 +5,7 @@ import {
   processColor,
 } from 'react-native';
 import MediaLibrary from './NativeMediaLibrary';
+// const MediaLibrary = require('./NativeMediaLibrary').default;
 
 type ImagesTypes = ImageRequireSource | string;
 

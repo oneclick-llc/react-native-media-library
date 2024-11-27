@@ -6,6 +6,10 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>MediaLibraryExample</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>3232</string>
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>3232ee</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -14,10 +18,6 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-      <string>3232</string>
-      <key>NSPhotoLibraryAddUsageDescription</key>
-      <string>3232ee</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
