@@ -1,5 +1,5 @@
 {
-  "name": "react-native-media-library",
+  "name": "@oneclick/react-native-media-library",
   "version": "3.1.0",
   "description": "Photo library access",
   "source": "./src/index.tsx",
@@ -52,14 +52,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sergeymild/react-native-media-library.git"
+    "url": "git+https://github.com/oneclick-llc/react-native-media-library.git"
   },
-  "author": "Sergei Golishnikov <sergeymild@yandex.ru> (https://github.com/sergeymild)",
+  "author": "OneClick <example@example.com> (https://github.com/oneclick-llc)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/sergeymild/react-native-media-library/issues"
+    "url": "https://github.com/oneclick-llc/react-native-media-library/issues"
   },
-  "homepage": "https://github.com/sergeymild/react-native-media-library#readme",
+  "homepage": "https://github.com/oneclick-llc/react-native-media-library#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
