@@ -9,7 +9,6 @@ Pod::Spec.new do |s|
   s.homepage     = package["homepage"]
   s.license      = package["license"]
   s.authors      = package["author"]
-  s.swift_version = '5.0'
   s.platforms    = { :ios => min_ios_version_supported }
   s.source       = { :git => "https://github.com/sergeymild/react-native-media-library.git", :tag => "#{s.version}" }
 

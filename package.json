@@ -1,6 +1,6 @@
 {
-  "name": "react-native-media-library2",
-  "version": "3.0.4",
+  "name": "react-native-media-library",
+  "version": "3.0.5",
   "description": "E",
   "main": "src/index.tsx",
   "module": "src/index.tsx",
@@ -30,7 +30,6 @@
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "prepare": "bob build",
     "postinstall": "cd example && yarn install && npx pod-install && cd .."
   },
   "keywords": [
@@ -61,10 +60,11 @@
     "postinstall-postinstall": "^2.1.0",
     "prettier": "^3.0.3",
     "react": "18.3.1",
-    "react-native": "0.76.1",
-    "react-native-builder-bob": "^0.30.3",
-    "turbo": "^1.10.7",
-    "typescript": "^5.2.2"
+    "react-native": "0.76.3",
+    "typescript": "^5.2.2",
+    "@react-native-community/cli": "16.0.0",
+    "@react-native-community/cli-platform-android": "16.0.0",
+    "@react-native-community/cli-platform-ios": "^16.0.0"
   },
   "resolutions": {
     "@types/react": "^18.2.44"
@@ -104,32 +104,6 @@
     "trailingComma": "es5",
     "useTabs": false
   },
-  "react-native-builder-bob": {
-    "source": "src",
-    "output": "lib",
-    "targets": [
-      "codegen",
-      [
-        "commonjs",
-        {
-          "esm": true
-        }
-      ],
-      [
-        "module",
-        {
-          "esm": true
-        }
-      ],
-      [
-        "typescript",
-        {
-          "project": "tsconfig.build.json",
-          "esm": true
-        }
-      ]
-    ]
-  },
   "codegenConfig": {
     "name": "RNMediaLibrarySpec",
     "type": "modules",
@@ -141,10 +115,5 @@
     "android": {
       "javaPackageName": "com.medialibrary"
     }
-  },
-  "create-react-native-library": {
-    "type": "module-new",
-    "languages": "kotlin-objc",
-    "version": "0.42.2"
   }
 }
