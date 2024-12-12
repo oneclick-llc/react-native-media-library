@@ -1,4 +1,4 @@
-package com.reactnativemedialibrary
+package com.medialibrary
 
 @Suppress("EnumEntryName")
 enum class AssetItemKeys {

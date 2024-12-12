@@ -1,4 +1,4 @@
-package com.reactnativemedialibrary
+package com.medialibrary
 
 import android.util.Base64
 import android.util.Base64OutputStream

@@ -1,4 +1,4 @@
-package com.reactnativemedialibrary
+package com.medialibrary
 
 import android.content.ContentResolver
 import android.database.Cursor
@@ -7,7 +7,7 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
-import com.reactnativemedialibrary.AssetItemKeys.*
+import com.medialibrary.AssetItemKeys.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException

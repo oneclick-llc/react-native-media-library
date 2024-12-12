@@ -8,14 +8,6 @@ import android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
-import com.reactnativemedialibrary.Base64Downloader
-import com.reactnativemedialibrary.ManipulateImages
-import com.reactnativemedialibrary.MediaLibrary
-import com.reactnativemedialibrary.MediaLibraryUtils
-import com.reactnativemedialibrary.MedialLibraryCreateAsset
-import com.reactnativemedialibrary.fetchFrame
-import com.reactnativemedialibrary.getCollections
-import com.reactnativemedialibrary.singleQuery
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

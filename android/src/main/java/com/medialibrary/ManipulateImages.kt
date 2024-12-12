@@ -1,22 +1,17 @@
-package com.reactnativemedialibrary
+package com.medialibrary
 
 import android.content.Context
-import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.Log
 import androidx.annotation.ColorInt
-import com.facebook.react.uimanager.PixelUtil
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.InputStream
-import java.lang.RuntimeException
 import java.net.URI
-import java.net.URL
 
 
 fun toCompressFormat(format: String): Bitmap.CompressFormat {
