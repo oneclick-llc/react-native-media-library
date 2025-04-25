@@ -23,14 +23,14 @@
 @implementation MediaLibraryFileEntry
 - (NSMutableDictionary *)toNSDictionary
 {
-     
+
     NSMutableDictionary *dictionary = [[NSMutableDictionary alloc] init];
     [dictionary setValue:self.name forKey:@"filename"];
     [dictionary setValue:self.absolutePath forKey:@"uri"];
     [dictionary setValue:@(self.isDirectory) forKey:@"isDirectory"];
     [dictionary setValue:@(self.size) forKey:@"size"];
     [dictionary setValue:@([self.modificationDate timeIntervalSince1970] * 1000.0) forKey:@"modificationTime"];
-     
+
     return dictionary;
 }
 @end
@@ -60,7 +60,7 @@ NSString *const RESULT_TRUE = @"{\"result\": true}";
     entry.absolutePath = @(file.absolutePath.c_str());
     entry.isDirectory = file.isDir;
     entry.size = file.size;
-    
+
     entry.modificationDate = [NSDate dateWithTimeIntervalSince1970:file.lastModificationTime / 1000];
     return entry;
 };
@@ -74,24 +74,34 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 
 // MARK: getAssets
 - (void)getAssets:(JS::NativeMediaLibrary::SpecGetAssetsOptions &)options callback:(RCTResponseSenderBlock)callback {
-    
+
     int limit = options.limit().value_or(-1);
     int offset = options.offset().value_or(-1);
     NSString *sortBy = options.sortBy();
     NSString *sortOrder = options.sortOrder();
     NSString *collectionId = options.collectionId();
-    NSArray *mediaTypes = @[];
-    if (options.mediaType().has_value()) {
-        //mediaTypes = RCTConvertVecToArray(options.mediaType());
+
+    std::optional<facebook::react::LazyVector<NSString *>> mediaTypeOpt = options.mediaType();
+    NSArray<NSString *> *mediaTypes = @[];
+    if (mediaTypeOpt.has_value()) {
+      const facebook::react::LazyVector<NSString *> &vec = mediaTypeOpt.value();
+      NSMutableArray<NSString *> *mutableArray = [NSMutableArray arrayWithCapacity:vec.size()];
+      for (size_t i = 0; i < vec.size(); ++i) {
+        NSString *str = vec.at(i); // LazyVector returns NSString* directly in this case
+        if (str) {
+          [mutableArray addObject:str];
+        }
+      }
+      mediaTypes = [mutableArray copy];
     }
-    
+
     [MediaAssetManager fetchAssetsWithLimit:limit
                                      offset:offset
                                      sortBy:sortBy
                                   sortOrder:sortOrder
                                   mediaType:mediaTypes
                                collectionId:collectionId completion:^(NSString * _Nonnull json) {
-        
+
         callback(@[json]);
     }];
 
@@ -116,7 +126,7 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 - (void)exportVideo:(JS::NativeMediaLibrary::SpecExportVideoParams &)params callback:(RCTResponseSenderBlock)callback {
   auto identifier = params.identifier();
   auto resultPath = params.resultSavePath();
-  
+
   [MediaAssetManager exportVideoWithIdentifier:identifier resultSavePath:resultPath completion:^(BOOL success) {
     auto result = success ? RESULT_TRUE : RESULT_FALSE;
     callback(@[result]);
@@ -127,7 +137,7 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 - (void)saveToLibrary:(JS::NativeMediaLibrary::SpecSaveToLibraryParams &)params callback:(RCTResponseSenderBlock)callback {
   auto localUri = params.localUrl();
   auto album = params.album();
-  
+
   [LibrarySaveToCameraRoll saveToCameraRollWithLocalUri:localUri
                                                   album:album
                                                callback:^(NSString * _Nullable error, NSString * _Nullable json) {
@@ -148,7 +158,7 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
   auto url = params.url();
   double time = params.time();
   double quality = params.quality();
-  
+
   dispatch_async(defQueue, ^{
     auto resultString = [FetchVideoFrame fetchVideoFrame:url time:time quality:quality];
     callback(@[resultString]);
@@ -161,13 +171,13 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
   auto path = options.path();
   auto extensions = options.extensions();
   auto rawSortBy = "modificationTime_desc";
-  
-  
+
+
   dispatch_async(defQueue, ^{
     MediaAssetFileNative::fileVector_t files;
     auto rPath = [path cStringUsingEncoding:NSUTF8StringEncoding];
     MediaAssetFileNative::getFilesList(rPath, rawSortBy, &files);
-    
+
     NSMutableArray<NSMutableDictionary *> *entries = [NSMutableArray arrayWithCapacity:files.size()];
     for(int i = 0; i < files.size(); i++) {
       auto f = files[i];
@@ -177,22 +187,22 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
         auto e = [[NSString alloc] initWithCString:ext.c_str() encoding:NSUTF8StringEncoding];
         if (![extensions containsString:e]) skip = true;
       }
-      
+
       if (skip) continue;
       MediaLibraryFileEntry *entry = [self createFrom:files[i]];
       [entries addObject:[entry toNSDictionary]];
     }
-    
+
     NSError *error;
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:entries
                                                        options:0
                                                          error:&error];
-    
+
     NSString *jsonString = @"[]";
     if (jsonData) {
       jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
     }
-    
+
     callback(@[jsonString]);
   });
 }
@@ -204,15 +214,15 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
   auto backgroundColorNum = params.backgroundColor();
 
   UIColor *backgroundColor = [RCTConvert UIColor:[NSNumber numberWithDouble:backgroundColorNum]];
-  
+
   auto arraySize = params.images().size();
-  
+
   NSMutableArray * imagesPathArray = [[NSMutableArray alloc] initWithCapacity:arraySize];
   for (int i = 0; i < params.images().size() -1; i++) {
     auto obj = params.images().at(i);
     auto rawPath = obj.image();
     NSMutableDictionary* pos = [[NSMutableDictionary alloc] init];
-    
+
     if (obj.positions().has_value()) {
       auto rawPos = obj.positions().value();
       NSInteger x = rawPos.x();
@@ -230,7 +240,7 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 
   dispatch_async(defQueue, ^{
     NSMutableArray * imagesArray = [[NSMutableArray alloc] initWithCapacity:arraySize];
-    
+
     for (NSDictionary* obj in imagesPathArray) {
       NSString *path = [obj valueForKey:@"image"];
       NSDictionary *positions = [obj valueForKey:@"positions"];
@@ -242,11 +252,11 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
                                                      resultSavePath:resultSavePath
                                                      mainImageIndex:mainImageIndex
                                                     backgroundColor:backgroundColor];
-    
+
     if (error) {
       RCTLogWarn(@"MediaLibrary.combineImages error: %@", error);
     }
-    
+
     auto result = error ? RESULT_FALSE : RESULT_TRUE;
     callback(@[result]);
   });
@@ -254,27 +264,27 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 
 // MARK: imageResize
 - (void)imageResize:(JS::NativeMediaLibrary::SpecImageResizeParams &)params callback:(RCTResponseSenderBlock)callback {
-  
+
   auto uri = params.uri();
   auto rawWidth = params.width();
   auto rawHeight = params.height();
   auto format = params.format();
   auto resultSavePath = params.resultSavePath();
-  
+
   NSNumber *width = [NSNumber numberWithDouble:rawWidth];
   NSNumber *height = [NSNumber numberWithDouble:rawHeight];
-  
+
   dispatch_async(defQueue, ^{
     NSString* error = [LibraryImageResize resizeWithUri:uri
                                                   width:width
                                                  height:height
                                                  format:format
                                          resultSavePath:resultSavePath];
-    
+
     if (error) {
       RCTLogWarn(@"MediaLibrary.imageResize error: %@", error);
     }
-    
+
     auto result = error ? RESULT_FALSE : RESULT_TRUE;
     callback(@[result]);
   });
@@ -282,7 +292,7 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 
 // MARK: imageCrop
 - (void)imageCrop:(JS::NativeMediaLibrary::SpecImageCropParams &)params callback:(RCTResponseSenderBlock)callback {
-  
+
   auto imageUri = params.uri();
   auto rawX = params.x();
   auto rawY = params.y();
@@ -290,7 +300,7 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
   auto rawHeight = params.height();
   auto rawFormat = params.format();
   auto rawPath = params.resultSavePath();
-  
+
   dispatch_async(defQueue, ^{
     NSString* error = [LibraryImageResize cropWithUri:imageUri
                                                     x:[NSNumber numberWithDouble:rawX]
@@ -299,11 +309,11 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
                                                height:[NSNumber numberWithDouble:rawHeight]
                                                format:rawFormat
                                        resultSavePath:rawPath];
-    
+
     if (error) {
       RCTLogWarn(@"MediaLibrary.imageCrop error: %@", error);
     }
-    
+
     auto result = error ? RESULT_FALSE : RESULT_TRUE;
     callback(@[result]);
   });
@@ -311,9 +321,9 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 
 // MARK: imageSizes
 - (void)imageSizes:(JS::NativeMediaLibrary::SpecImageSizesParams &)params callback:(RCTResponseSenderBlock)callback {
-  
+
   auto imagesPathArray = RCTConvertVecToArray(params.images());
-  
+
   [LibraryImageSize getSizesWithPaths:imagesPathArray completion:^(NSString * _Nonnull result) {
     callback(@[result]);
   }];
@@ -323,7 +333,7 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 // MARK: downloadAsBase64
 - (void)downloadAsBase64:(JS::NativeMediaLibrary::SpecDownloadAsBase64Params &)params callback:(RCTResponseSenderBlock)callback {
   auto imageUrl = params.url();
-  
+
   dispatch_async(defQueue, ^{
     [Base64Downloader downloadWithUrl:imageUrl completion:^(NSString * _Nullable string) {
       callback(@[string]);
