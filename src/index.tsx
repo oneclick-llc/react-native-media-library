@@ -104,6 +104,8 @@ interface CombineImage {
 export interface FullAssetItem extends AssetItem {
   // on android, it will be available only from API 24 (N)
   readonly location?: { latitude: number; longitude: number };
+  // on Android it is the path equal to URI, on iOS the URI is ph:// and this (URL) is file://
+  readonly url?: string;
 }
 
 const prepareImages = (images: ImagesTypes[]): string[] => {
