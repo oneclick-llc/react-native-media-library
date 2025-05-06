@@ -10,6 +10,7 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <AVFoundation/AVAsset.h>
+#import <Photos/Photos.h>
 
 @implementation FetchVideoFrame
 
@@ -36,58 +37,170 @@
 }
 
 
+// ATTENTION: This is a legacy method that will not work on modern iOS. Use fetchVideoFrameById instead.
 +(nullable NSString*)fetchVideoFrame:(NSString*)url time:(double)time quality:(double)quality {
     NSLog(@"fetchVideoFrame: time: %f, quality: %f url: %@", time, quality, url);
+    
     NSString *p = [url stringByReplacingOccurrencesOfString:@"file://" withString:@""];
     NSURL *nsUrl = [NSURL URLWithString:url];
     if (![[NSFileManager defaultManager] fileExistsAtPath:p]) {
+        NSLog(@"File does not exist at path: %@", p);
         return NULL;
     }
-    
-    auto asset = [[AVURLAsset alloc] initWithURL:nsUrl options:nil];
-    auto generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
+
+    // Start security-scoped access
+    BOOL hasAccess = [nsUrl startAccessingSecurityScopedResource];
+    if (!hasAccess) {
+        NSLog(@"Failed to start security-scoped access for URL: %@", url);
+        return NULL;
+    }
+
+    AVURLAsset *asset = [[AVURLAsset alloc] initWithURL:nsUrl options:nil];
+    AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
     generator.appliesPreferredTrackTransform = YES;
     generator.requestedTimeToleranceBefore = kCMTimeZero;
     generator.requestedTimeToleranceAfter = kCMTimeZero;
-    
+
     NSError *err = NULL;
     CMTime cmTime = CMTimeMake(time * 1000, 1000);
     CGImageRef imgRef = [generator copyCGImageAtTime:cmTime actualTime:NULL error:&err];
+    
+    // Stop security-scoped access
+    [nsUrl stopAccessingSecurityScopedResource];
+
     if (err) {
-        NSLog(@"error: %@", err.localizedFailureReason);
+        NSLog(@"Error generating image: %@", err.localizedFailureReason);
         return NULL;
     }
-    
+
     UIImage *thumbnail = [UIImage imageWithCGImage:imgRef];
-    
-    
+
     NSString *fileName = [[[NSUUID UUID] UUIDString] stringByAppendingString:@".jpg"];
     NSString *newPath = [[self createVideoThumbnailsFolder] stringByAppendingPathComponent:fileName];
     NSLog(@"writeTo: %@", newPath);
     NSData *data = UIImageJPEGRepresentation(thumbnail, quality);
-    
+
     if (![data writeToFile:newPath atomically:YES]) {
-        NSLog(@"error:Can't write to file");
+        NSLog(@"Error: Can't write to file");
+        CGImageRelease(imgRef);
         return NULL;
     }
-    
+
     NSURL *fileURL = [NSURL fileURLWithPath:newPath];
     NSString *filePath = [fileURL absoluteString];
 
     CGImageRelease(imgRef);
-    NSMutableDictionary* response = [[NSMutableDictionary alloc] initWithCapacity:3];
+
+    NSMutableDictionary *response = [[NSMutableDictionary alloc] initWithCapacity:3];
     [response setValue:filePath forKey:@"url"];
-  
-  [response setValue:[[NSNumber alloc] initWithDouble:(double) thumbnail.size.width] forKey:@"width"];
-  [response setValue:[[NSNumber alloc] initWithDouble:(double) thumbnail.size.height] forKey:@"height"];
-    
-  
-  NSError *error;
-  NSData *jsonData = [NSJSONSerialization dataWithJSONObject:response
-                                                     options:NSJSONWritingPrettyPrinted // Pass 0 if you don't care about the readability of the generated string
-                                                       error:&error];
-  
-  return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-    
+    [response setValue:@(thumbnail.size.width) forKey:@"width"];
+    [response setValue:@(thumbnail.size.height) forKey:@"height"];
+
+    NSError *jsonError;
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:response
+                                                       options:NSJSONWritingPrettyPrinted
+                                                         error:&jsonError];
+    if (jsonError) {
+        NSLog(@"Error serializing JSON: %@", jsonError.localizedDescription);
+        return NULL;
+    }
+
+    return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
 }
+
++(nullable NSString*)fetchVideoFrameById:(NSString*)localIdentifier time:(double)time quality:(double)quality {
+    NSLog(@"fetchVideoFrame: time: %f, quality: %f localIdentifier: %@", time, quality, localIdentifier);
+
+    __block NSString *result = nil;
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+
+    [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+        if (status != PHAuthorizationStatusAuthorized) {
+            NSLog(@"Photos access denied. Status: %ld", (long)status);
+            dispatch_semaphore_signal(semaphore);
+            return;
+        }
+
+        // Fetch PHAsset by local identifier
+        PHFetchResult<PHAsset *> *fetchResult = [PHAsset fetchAssetsWithLocalIdentifiers:@[localIdentifier] options:nil];
+        PHAsset *targetAsset = fetchResult.firstObject;
+
+        if (!targetAsset) {
+            NSLog(@"No video asset found for local identifier: %@", localIdentifier);
+            dispatch_semaphore_signal(semaphore);
+            return;
+        }
+
+        // Request AVAsset for the video
+        PHVideoRequestOptions *options = [[PHVideoRequestOptions alloc] init];
+        options.version = PHVideoRequestOptionsVersionOriginal;
+        options.networkAccessAllowed = YES;
+
+        [[PHImageManager defaultManager] requestAVAssetForVideo:targetAsset options:options resultHandler:^(AVAsset *avAsset, AVAudioMix *audioMix, NSDictionary *info) {
+            if (!avAsset) {
+                NSLog(@"Failed to load AVAsset. Info: %@", info);
+                dispatch_semaphore_signal(semaphore);
+                return;
+            }
+
+            // Create image generator
+            AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:avAsset];
+            generator.appliesPreferredTrackTransform = YES;
+            generator.requestedTimeToleranceBefore = kCMTimeZero;
+            generator.requestedTimeToleranceAfter = kCMTimeZero;
+
+            NSError *err = nil;
+            CMTime cmTime = CMTimeMake(time * 1000, 1000);
+            CGImageRef imgRef = [generator copyCGImageAtTime:cmTime actualTime:NULL error:&err];
+            if (err) {
+                NSLog(@"Error generating image: %@", err.localizedFailureReason);
+                dispatch_semaphore_signal(semaphore);
+                return;
+            }
+
+            UIImage *thumbnail = [UIImage imageWithCGImage:imgRef];
+
+            // Save thumbnail to file
+            NSString *thumbnailFileName = [[[NSUUID UUID] UUIDString] stringByAppendingString:@".jpg"];
+            NSString *newPath = [[self createVideoThumbnailsFolder] stringByAppendingPathComponent:thumbnailFileName];
+            NSLog(@"Writing thumbnail to: %@", newPath);
+            NSData *data = UIImageJPEGRepresentation(thumbnail, quality);
+
+            if (![data writeToFile:newPath atomically:YES]) {
+                NSLog(@"Error: Can't write thumbnail to file");
+                CGImageRelease(imgRef);
+                dispatch_semaphore_signal(semaphore);
+                return;
+            }
+
+            NSURL *fileURL = [NSURL fileURLWithPath:newPath];
+            NSString *filePath = [fileURL absoluteString];
+
+            CGImageRelease(imgRef);
+
+            // Create JSON response
+            NSMutableDictionary *response = [[NSMutableDictionary alloc] initWithCapacity:3];
+            [response setValue:filePath forKey:@"url"];
+            [response setValue:@(thumbnail.size.width) forKey:@"width"];
+            [response setValue:@(thumbnail.size.height) forKey:@"height"];
+
+            NSError *jsonError;
+            NSData *jsonData = [NSJSONSerialization dataWithJSONObject:response
+                                                               options:NSJSONWritingPrettyPrinted
+                                                                 error:&jsonError];
+            if (jsonError) {
+                NSLog(@"Error serializing JSON: %@", jsonError.localizedDescription);
+                dispatch_semaphore_signal(semaphore);
+                return;
+            }
+
+            result = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+            dispatch_semaphore_signal(semaphore);
+        }];
+    }];
+
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+    return result;
+}
+
 @end

@@ -22,6 +22,7 @@ export interface FetchAssetsOptions {
 
 export interface FetchThumbnailOptions {
   url: string;
+  assetId: string;
   time?: number;
   quality?: number;
 }
@@ -218,6 +219,7 @@ export const mediaLibrary = {
           time: params.time ?? 0,
           quality: params.quality ?? 1,
           url: params.url,
+          assetId: params.assetId,
         },
         (response) => resolve(JSON.parse(response))
       );

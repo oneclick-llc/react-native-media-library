@@ -39,7 +39,7 @@ export interface Spec extends TurboModule {
   ): void;
 
   fetchVideoFrame(
-    params: { url: string; time: number; quality: number },
+    params: { url: string; time: number; quality: number; assetId: string },
     callback: (items: string) => void
   ): void;
 

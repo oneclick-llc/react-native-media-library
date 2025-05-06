@@ -155,13 +155,26 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 
 // MARK: fetchVideoFrame
 - (void)fetchVideoFrame:(JS::NativeMediaLibrary::SpecFetchVideoFrameParams &)params callback:(RCTResponseSenderBlock)callback {
+  auto assetId = params.assetId();
   auto url = params.url();
   double time = params.time();
   double quality = params.quality();
 
   dispatch_async(defQueue, ^{
     auto resultString = [FetchVideoFrame fetchVideoFrame:url time:time quality:quality];
-    callback(@[resultString]);
+    if (resultString != nil) {
+      callback(@[resultString]);
+    } else {
+      auto secondTryResult = [FetchVideoFrame fetchVideoFrameById:assetId time:time quality:quality];
+      if (secondTryResult != nil) {
+        callback(@[secondTryResult]);
+      } else {
+        NSDictionary *responseDictionary = @{@"error": @"Error fetching video frame. None of the native methods returned valid result."};
+        NSData *data = [NSJSONSerialization dataWithJSONObject:responseDictionary options:kNilOptions error:nil];
+        NSString *jsonStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        callback(@[jsonStr]);
+      }
+    }
   });
 }
 
