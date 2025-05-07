@@ -231,7 +231,7 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
   auto arraySize = params.images().size();
 
   NSMutableArray * imagesPathArray = [[NSMutableArray alloc] initWithCapacity:arraySize];
-  for (int i = 0; i < params.images().size() -1; i++) {
+  for (int i = 0; i < arraySize; i++) {
     auto obj = params.images().at(i);
     auto rawPath = obj.image();
     NSMutableDictionary* pos = [[NSMutableDictionary alloc] init];
