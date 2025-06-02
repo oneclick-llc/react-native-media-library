@@ -18,6 +18,8 @@ export interface FetchAssetsOptions {
   offset?: number;
   onlyFavorites?: boolean;
   collectionId?: string;
+  fromDate?: number;
+  toDate?: number;
 }
 
 export interface FetchThumbnailOptions {
@@ -147,6 +149,8 @@ export const mediaLibrary = {
       offset: options?.offset,
       onlyFavorites: options?.onlyFavorites ?? false,
       collectionId: options?.collectionId,
+      fromDate: options?.fromDate,
+      toDate: options?.toDate,
     };
     if (params.offset && !params.limit) {
       throw new Error(

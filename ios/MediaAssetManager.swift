@@ -161,7 +161,7 @@ extension PHImageManager {
             }
         }
     }
-
+    
     func asyncRequestAVAsset(forVideo asset: PHAsset, fetchOriginal: Bool) async -> (AVAsset?, Bool) {
         let result = await withCheckedContinuation { continuation in
             let options = PHVideoRequestOptions()
@@ -198,7 +198,7 @@ open class MediaAssetManager: NSObject {
     private static func assetToData(asset: PHAsset, isSloMo: Bool, url: String?) -> AssetData {
         var localUrl = url
         if let u = url {
-          localUrl = String(u.split(separator: "#").first!)
+            localUrl = String(u.split(separator: "#").first!)
         }
         var location: AssetLocation?
         if let loc = asset.location {
@@ -254,6 +254,8 @@ open class MediaAssetManager: NSObject {
         sortOrder: String?,
         mediaType: [String],
         collectionId: String?,
+        fromDate: NSNumber?,
+        toDate: NSNumber?,
         completion: @escaping (String) -> Void
     ) {
         Task {
@@ -274,6 +276,27 @@ open class MediaAssetManager: NSObject {
                 if mediaType.contains("video") { type = .video }
                 let predicate = NSPredicate(format: "mediaType = %d", type.rawValue)
                 options.predicate = predicate
+            }
+            
+            var predicates: [NSPredicate] = []
+            
+            if let existingPredicate = options.predicate {
+                predicates.append(existingPredicate)
+            }
+            
+            if let from = fromDate?.doubleValue, let to = toDate?.doubleValue {
+                let datePredicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", NSDate(timeIntervalSince1970: from / 1000.0), NSDate(timeIntervalSince1970: to / 1000.0))
+                predicates.append(datePredicate)
+            } else if let from = fromDate?.doubleValue {
+                let datePredicate = NSPredicate(format: "creationDate >= %@", NSDate(timeIntervalSince1970: from / 1000.0))
+                predicates.append(datePredicate)
+            } else if let to = toDate?.doubleValue {
+                let datePredicate = NSPredicate(format: "creationDate < %@", NSDate(timeIntervalSince1970: to / 1000.0))
+                predicates.append(datePredicate)
+            }
+            
+            if predicates.count > 0 {
+                options.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
             }
             
             if limit > 0 && offset == -1 { options.fetchLimit = limit }
@@ -311,7 +334,7 @@ open class MediaAssetManager: NSObject {
             completion(String(data: data, encoding: .utf8) ?? "[]")
         }
     }
-
+    
     public static func fetchAssetUrl(asset: PHAsset) async -> (URL?, Bool) {
         if asset.mediaType == .image {
             guard let url = await asset.asyncRequestUrl() else { return (nil, false) }
@@ -365,7 +388,7 @@ open class MediaAssetManager: NSObject {
             
             index = 0
             total = albums.count
-
+            
             while total > 0 {
                 let asset = albums.object(at: index)
                 collections.append(.init(

@@ -13,6 +13,8 @@ export interface Spec extends TurboModule {
       offset?: number;
       onlyFavorites?: boolean;
       collectionId?: string;
+      fromDate?: number;
+      toDate?: number;
     },
     callback: (items: string) => void
   ): void;
