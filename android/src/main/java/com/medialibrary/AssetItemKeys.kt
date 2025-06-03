@@ -12,7 +12,8 @@ enum class AssetItemKeys {
   width,
   height,
   url,
-  uri
+  uri,
+  contentUri
 }
 
 @Suppress("EnumEntryName")

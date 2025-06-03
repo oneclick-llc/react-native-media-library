@@ -1,6 +1,7 @@
 package com.medialibrary
 
 import android.content.ContentResolver
+import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -55,7 +56,6 @@ fun Bundle.addSort(input: JSONObject) {
   putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, direction)
 }
 
-
 @RequiresApi(Build.VERSION_CODES.O)
 fun Bundle.sqlSelection(input: String) {
   putString(ContentResolver.QUERY_ARG_SQL_SELECTION, input)
@@ -68,7 +68,6 @@ fun Bundle.sqlArgs(selectionArgs: Array<String>) {
     selectionArgs
   )
 }
-
 
 fun addLegacySort(input: JSONObject): String {
   var field = DATE_MODIFIED
@@ -92,18 +91,18 @@ fun queryByMediaType(input: JSONObject): Tuple {
     val jsonArray = input.getJSONArray(AssetItemKeys.mediaType.name)
     for (i in (0 until jsonArray.length())) {
       when (jsonArray.getString(i)) {
-          AssetMediaType.video.name -> {
-            selection.add("$MEDIA_TYPE = ?")
-            arguments.add(MEDIA_TYPE_VIDEO.toString())
-          }
-          AssetMediaType.audio.name -> {
-            selection.add("$MEDIA_TYPE = ?")
-            arguments.add(MEDIA_TYPE_AUDIO.toString())
-          }
-          AssetMediaType.photo.name -> {
-            selection.add("$MEDIA_TYPE = ?")
-            arguments.add(MEDIA_TYPE_IMAGE.toString())
-          }
+        AssetMediaType.video.name -> {
+          selection.add("$MEDIA_TYPE = ?")
+          arguments.add(MEDIA_TYPE_VIDEO.toString())
+        }
+        AssetMediaType.audio.name -> {
+          selection.add("$MEDIA_TYPE = ?")
+          arguments.add(MEDIA_TYPE_AUDIO.toString())
+        }
+        AssetMediaType.photo.name -> {
+          selection.add("$MEDIA_TYPE = ?")
+          arguments.add(MEDIA_TYPE_IMAGE.toString())
+        }
       }
     }
   }
@@ -124,13 +123,43 @@ fun ContentResolver.listQuery(
   input: JSONObject,
 ): JSONArray {
   var (selection, arguments) = queryByMediaType(input)
+
   if (input.has("collectionId")) {
     if (selection.isNotEmpty()) selection = "($selection) AND "
     selection += "${MediaStore.Images.Media.BUCKET_ID} = ?"
     arguments = arrayOf(*arguments, input.getString("collectionId"))
   }
+
+  val dateSelection = buildDateRangeSelection(input)
+  if (dateSelection.selection.isNotEmpty()) {
+    selection = if (selection.isNotEmpty()) "($selection) AND ${dateSelection.selection}" else dateSelection.selection
+    arguments = arrayOf(*arguments, *dateSelection.arguments)
+  }
+
   println("⚽️ SELECT: $selection, ${arguments.contentToString()}")
   return makeQuery(uri, context, input, selection, arguments)
+}
+
+fun buildDateRangeSelection(input: JSONObject): Tuple {
+  val selection = StringBuilder()
+  val arguments = mutableListOf<String>()
+
+  if (input.has("fromDate")) {
+    val fromTimestamp = input.getLong("fromDate")
+    selection.append("${MediaLibrary.dateAdded} >= ?")
+    arguments.add((fromTimestamp / 1000).toString())
+  }
+
+  if (input.has("toDate")) {
+    val toTimestamp = input.getLong("toDate")
+    if (selection.isNotEmpty()) {
+      selection.append(" AND ")
+    }
+    selection.append("${MediaLibrary.dateAdded} <= ?")
+    arguments.add((toTimestamp / 1000).toString())
+  }
+
+  return Tuple(selection.toString(), arguments.toTypedArray())
 }
 
 fun ContentResolver.getCollections(mediaType: Int): JSONArray {
@@ -191,9 +220,7 @@ fun ContentResolver.makeQuery(
 
   val limit = if (input.has("limit")) input.getInt("limit") else -1
   val offset = if (input.has("offset")) input.getInt("offset") else -1
-  /**
-   * Change the way to fetch Media Store
-   */
+
   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
     // Get All data in Cursor by sorting in DESC order
     context.contentResolver.query(
@@ -219,7 +246,7 @@ fun ContentResolver.makeQuery(
       sortOrder
     )
   }?.use { cursor ->
-    cursor.mapToJson(this, galleryImageUrls, input, limit)
+    cursor.mapToJson(this, galleryImageUrls, input, limit, uri)
   }
 
   return galleryImageUrls

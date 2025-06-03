@@ -1,6 +1,7 @@
 package com.medialibrary
 
 import android.content.ContentResolver
+import android.content.ContentUris
 import android.database.Cursor
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
@@ -104,7 +105,8 @@ fun Cursor.mapToJson(
   contentResolver: ContentResolver,
   array: JSONArray,
   input: JSONObject,
-  limit: Int
+  limit: Int,
+  cursorUri: Uri
 ) {
   if (count == 0) return
   val idIndex = getColumnIndex(MediaStore.Images.Media._ID)
@@ -115,11 +117,13 @@ fun Cursor.mapToJson(
     getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED)
   val durationIndex = getColumnIndex(MediaStore.Video.VideoColumns.DURATION)
   val localUriIndex = getColumnIndex(MediaStore.Images.Media.DATA)
+
   var extensions: Set<String>? = null
   if (input.has("extensions")) {
     extensions = toSet(input.getJSONArray("extensions"))
   }
   while (moveToNext()) {
+    val contentUri = ContentUris.withAppendedId(cursorUri, getLong(idIndex))
     val assetId = getString(idIndex)
     val path = getString(localUriIndex)
     val extension = path.substring(path.lastIndexOf(".") + 1)
@@ -140,6 +144,7 @@ fun Cursor.mapToJson(
     `object`.put(width.name, widthHeight[0])
     `object`.put(height.name, widthHeight[1])
     `object`.put(uri.name, localUri)
+    `object`.put(AssetItemKeys.contentUri.name, contentUri)
     array.put(`object`)
     if (limit == 1) break
   }

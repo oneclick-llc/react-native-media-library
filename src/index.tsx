@@ -64,6 +64,8 @@ export interface AssetItem {
   readonly uri: string;
   // only on IOS
   readonly subtypes?: MediaSubType[];
+  // only on Android
+  readonly contentUri?: string;
 }
 
 export interface DiskAssetItem {
