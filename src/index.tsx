@@ -42,7 +42,7 @@ export interface Thumbnail {
   url: string;
   width: number;
   height: number;
-  timecode: number;
+  timecodeMs: number;
 }
 
 interface SaveToLibrary {

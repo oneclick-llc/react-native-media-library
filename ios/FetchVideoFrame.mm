@@ -95,6 +95,7 @@
     [response setValue:filePath forKey:@"url"];
     [response setValue:@(thumbnail.size.width) forKey:@"width"];
     [response setValue:@(thumbnail.size.height) forKey:@"height"];
+    [response setValue:@(0) forKey:@"timecodeMs"];
 
     NSError *jsonError;
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:response
@@ -183,6 +184,7 @@
             [response setValue:filePath forKey:@"url"];
             [response setValue:@(thumbnail.size.width) forKey:@"width"];
             [response setValue:@(thumbnail.size.height) forKey:@"height"];
+            [response setValue:@(0) forKey:@"timecodeMs"];
 
             NSError *jsonError;
             NSData *jsonData = [NSJSONSerialization dataWithJSONObject:response
