@@ -29,10 +29,20 @@ export interface FetchThumbnailOptions {
   quality?: number;
 }
 
+export interface FetchVideoThumbnailsOptions {
+  url: string;
+  assetId: string;
+  interval: number;
+  maximumWidth: number;
+  maximumHeight: number;
+  iosPreferredTimescale: number;
+}
+
 export interface Thumbnail {
   url: string;
   width: number;
   height: number;
+  timecode: number;
 }
 
 interface SaveToLibrary {
@@ -226,6 +236,22 @@ export const mediaLibrary = {
           quality: params.quality ?? 1,
           url: params.url,
           assetId: params.assetId,
+        },
+        (response) => resolve(JSON.parse(response))
+      );
+    });
+  },
+
+  fetchVideoThumbnails(params: FetchVideoThumbnailsOptions) {
+    return new Promise<Thumbnail | undefined>((resolve) => {
+      MediaLibrary.fetchVideoThumbnails(
+        {
+          url: params.url,
+          assetId: params.assetId,
+          interval: params.interval,
+          maximumWidth: params.maximumWidth,
+          maximumHeight: params.maximumHeight,
+          iosPreferredTimescale: params.iosPreferredTimescale,
         },
         (response) => resolve(JSON.parse(response))
       );

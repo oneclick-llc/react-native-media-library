@@ -45,6 +45,18 @@ export interface Spec extends TurboModule {
     callback: (items: string) => void
   ): void;
 
+  fetchVideoThumbnails(
+    params: {
+      url: string;
+      assetId: string;
+      interval: number;
+      maximumWidth: number;
+      maximumHeight: number;
+      iosPreferredTimescale: number;
+    },
+    callback: (items: string) => void
+  ): void;
+
   combineImages(
     params: {
       images: { image: string; positions?: { x: number; y: number } }[];

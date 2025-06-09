@@ -191,6 +191,49 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
     });
 }
 
+// MARK: fetchVideoThumbnails
+- (void)fetchVideoThumbnails:(JS::NativeMediaLibrary::SpecFetchVideoThumbnailsParams &)params callback:(RCTResponseSenderBlock)callback {
+    /*
+     url: string;
+     assetId: string;
+     interval: number;
+     maximumWidth: number;
+     maximumHeight: number;
+     iosPreferredTimescale: number;
+     */
+    auto url = params.url();
+    auto assetId = params.assetId();
+    double interval = params.interval();
+    double maximumWidth = params.maximumWidth();
+    double maximumHeight = params.maximumHeight();
+    double iosPreferredTimescale = params.iosPreferredTimescale();
+    
+    dispatch_async(defQueue, ^{
+        [LibraryFetchVideoThumbnails fetchVideoThumbnailsWithUrl:url assetId:assetId interval:interval maximumWidth:maximumWidth maximumHeight:maximumHeight iosPreferredTimescale:iosPreferredTimescale completion:^(NSString * _Nullable resultString, NSError * _Nullable error) {
+            if (resultString != nil) {
+                callback(@[resultString]);
+            } else if (error != nil) {
+                NSString *errorString = [NSString stringWithFormat:@"Domain: %@, Code: %ld, Description: %@",
+                                         error.domain,
+                                         (long)error.code,
+                                         error.localizedDescription];
+                NSDictionary *responseDictionary = @{@"error": errorString};
+                NSData *data = [NSJSONSerialization dataWithJSONObject:responseDictionary
+                                                               options:kNilOptions error:nil];
+                NSString *jsonStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                callback(@[jsonStr]);
+            } else {
+                NSDictionary *responseDictionary = @{@"error": @"Error fetching video thumbnails. Error unknown."};
+                NSData *data = [NSJSONSerialization dataWithJSONObject:responseDictionary
+                                                               options:kNilOptions error:nil];
+                NSString *jsonStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                callback(@[jsonStr]);
+            }
+        }];
+    });
+}
+
+
 
 // MARK: getFromDisk
 - (void)getFromDisk:(JS::NativeMediaLibrary::SpecGetFromDiskOptions &)options callback:(RCTResponseSenderBlock)callback {

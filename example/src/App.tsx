@@ -53,6 +53,71 @@ export default function App() {
       >
         <Text>getAsset</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        onPress={async () => {
+          const assets = await mediaLibrary.getAssets({
+            mediaType: ['video'],
+            // sortBy?: 'creationTime' | 'modificationTime';
+            // sortOrder?: 'asc' | 'desc';
+            // extensions?: string[];
+            // requestUrls?: boolean;
+            // limit?: number;
+            // offset?: number;
+            // onlyFavorites?: boolean;
+            // collectionId?: string;
+            // fromDate?: number;
+            // toDate?: number;
+          });
+          console.log('🍓[App.assets]', assets);
+          const videoAsset = assets.find(
+            (asset) => asset.mediaType === 'video'
+          );
+          if (!videoAsset) return;
+          const videoFrame = await mediaLibrary.fetchVideoFrame({
+            url: videoAsset.uri,
+            assetId: videoAsset.id,
+            // time?: number;
+            // quality?: number;
+          });
+          console.log('🍓[App.videoFrame]', videoFrame);
+        }}
+      >
+        <Text>getAsset+fetchVideoFrame</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={async () => {
+          const assets = await mediaLibrary.getAssets({
+            mediaType: ['video'],
+            // sortBy?: 'creationTime' | 'modificationTime';
+            // sortOrder?: 'asc' | 'desc';
+            // extensions?: string[];
+            // requestUrls?: boolean;
+            // limit?: number;
+            // offset?: number;
+            // onlyFavorites?: boolean;
+            // collectionId?: string;
+            // fromDate?: number;
+            // toDate?: number;
+          });
+          console.log('🍓[App.assets]', assets);
+          const videoAsset = assets.find(
+            (asset) => asset.mediaType === 'video'
+          );
+          if (!videoAsset) return;
+          console.log('🍓[App.videoAsset]', videoAsset);
+          const thumbnails = await mediaLibrary.fetchVideoThumbnails({
+            url: videoAsset.uri,
+            assetId: videoAsset.id,
+            interval: 1,
+            maximumWidth: 320,
+            maximumHeight: 320,
+            iosPreferredTimescale: 600,
+          });
+          console.log('🍓[fetchVideoThumbnails] result', thumbnails);
+        }}
+      >
+        <Text>getAsset+fetchVideoThumbnails</Text>
+      </TouchableOpacity>
     </View>
   );
 }
