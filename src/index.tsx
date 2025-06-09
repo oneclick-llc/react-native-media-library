@@ -243,7 +243,7 @@ export const mediaLibrary = {
   },
 
   fetchVideoThumbnails(params: FetchVideoThumbnailsOptions) {
-    return new Promise<Thumbnail | undefined>((resolve) => {
+    return new Promise<Thumbnail[] | undefined>((resolve) => {
       MediaLibrary.fetchVideoThumbnails(
         {
           url: params.url,
