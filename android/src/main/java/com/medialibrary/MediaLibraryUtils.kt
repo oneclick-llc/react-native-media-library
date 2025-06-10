@@ -98,27 +98,39 @@ object MediaLibraryUtils {
     return newFile
   }
 
-  inline fun withRetriever(contentResolver: ContentResolver, uri: Uri, handler: (MediaMetadataRetriever) -> Unit) {
+  inline fun withRetriever(
+    contentResolver: ContentResolver,
+    uri: Uri,
+    handler: (MediaMetadataRetriever) -> Unit
+  ) {
     try {
       val uriString = uri.toString()
-      val path = uri.path ?: return
       val r = retriever
       var openFileDescriptor: ParcelFileDescriptor? = null
+
       if (URLUtil.isFileUrl(uriString)) {
         r.setDataSource(uriString.removePrefix("file://"))
       } else if (URLUtil.isContentUrl(uriString)) {
         openFileDescriptor = contentResolver.openFileDescriptor(uri, "r")
         val fileDescriptor = openFileDescriptor?.fileDescriptor
+        if (fileDescriptor == null) {
+          println("withRetriever warning: fileDescriptor is null for provided contentUrl, indicating lack of permissions")
+          r.release()
+          openFileDescriptor?.close()
+          return
+        }
         r.setDataSource(fileDescriptor)
-        openFileDescriptor?.close()
       } else {
         r.setDataSource(uriString)
       }
+
       handler(r)
+
       openFileDescriptor?.close()
       r.release()
-    } catch (e: java.lang.RuntimeException) {
-      println(e.message)
+
+    } catch (e: Exception) {
+      println("withRetriever error: ${e.message}")
     }
   }
 
