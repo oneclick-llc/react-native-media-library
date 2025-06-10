@@ -100,17 +100,19 @@ object MediaLibraryUtils {
 
   inline fun withRetriever(contentResolver: ContentResolver, uri: Uri, handler: (MediaMetadataRetriever) -> Unit) {
     try {
+      val uriString = uri.toString()
       val path = uri.path ?: return
       val r = retriever
       var openFileDescriptor: ParcelFileDescriptor? = null
-      if (URLUtil.isFileUrl(path)) {
-        r.setDataSource(path.replace("file://", ""))
-      } else if (URLUtil.isContentUrl(path)) {
+      if (URLUtil.isFileUrl(uriString)) {
+        r.setDataSource(uriString.removePrefix("file://"))
+      } else if (URLUtil.isContentUrl(uriString)) {
         openFileDescriptor = contentResolver.openFileDescriptor(uri, "r")
         val fileDescriptor = openFileDescriptor?.fileDescriptor
         r.setDataSource(fileDescriptor)
+        openFileDescriptor?.close()
       } else {
-        r.setDataSource(path)
+        r.setDataSource(uriString)
       }
       handler(r)
       openFileDescriptor?.close()

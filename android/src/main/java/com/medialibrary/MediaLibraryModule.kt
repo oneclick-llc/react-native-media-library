@@ -122,6 +122,18 @@ class MediaLibraryModule(private val reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun fetchVideoThumbnails(params: ReadableMap, callback: Callback) {
+    scope.launch {
+      val input = params.asJsonInput()
+      val response = reactContext.fetchThumbnails(input)
+      if (response == null) {
+        callback("")
+      } else {
+        callback(response.toString())
+      }
+    }
+  }
+
   override fun combineImages(params: ReadableMap, callback: Callback) {
     scope.launch {
       val input = params.asJsonInput()
