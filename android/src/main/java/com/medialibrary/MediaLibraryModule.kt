@@ -36,7 +36,7 @@ class MediaLibraryModule(private val reactContext: ReactApplicationContext) :
 
   override fun getAssets(options: ReadableMap?, callback: Callback?) {
     if (options == null) {
-      callback?.invoke(Arguments.createArray())
+      callback?.invoke("[]")
       return
     }
     mediaLibrary.getAssets(options.asJsonInput()) {
@@ -85,7 +85,7 @@ class MediaLibraryModule(private val reactContext: ReactApplicationContext) :
         id
       )
       if (jsonArray.length() == 0) {
-        return@launch callback("")
+        return@launch callback(JSONObject().put("error", "asset $id not found").toString())
       }
       val media = jsonArray.getJSONObject(0)
       MediaLibraryUtils.getMediaLocation(media, contentResolver)
@@ -115,7 +115,7 @@ class MediaLibraryModule(private val reactContext: ReactApplicationContext) :
       val input = params.asJsonInput()
       val response = reactContext.fetchFrame(input)
       if (response == null) {
-        callback("")
+        callback(JSONObject().put("error", "could not fetch video frame").toString())
       } else {
         callback(response.toString())
       }
@@ -127,7 +127,7 @@ class MediaLibraryModule(private val reactContext: ReactApplicationContext) :
       val input = params.asJsonInput()
       val response = reactContext.fetchThumbnails(input)
       if (response == null) {
-        callback("")
+        callback(JSONObject().put("error", "could not fetch video thumbnails").toString())
       } else {
         callback(response.toString())
       }
