@@ -7,7 +7,9 @@ export default function App() {
 
   const report = (label: string, promise: Promise<unknown>) => {
     promise
-      .then((value) => setLastResult(`${label} resolved: ${JSON.stringify(value)}`))
+      .then((value) =>
+        setLastResult(`${label} resolved: ${JSON.stringify(value)}`)
+      )
       .catch((error) => setLastResult(`${label} rejected: ${String(error)}`));
   };
 
