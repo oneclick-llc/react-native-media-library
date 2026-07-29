@@ -2,7 +2,6 @@ package com.medialibrary
 
 import android.net.Uri
 import android.provider.MediaStore
-import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Callback
 import android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
 import com.facebook.react.bridge.ReactApplicationContext
@@ -176,11 +175,16 @@ class MediaLibraryModule(private val reactContext: ReactApplicationContext) :
 
   override fun downloadAsBase64(params: ReadableMap, callback: Callback) {
     scope.launch {
-      val input = params.asJsonInput()
-      val base64String = Base64Downloader.download(input.getString("url"))
-      val response = JSONObject()
-      response.put("base64", base64String)
-      callback(response.toString())
+      try {
+        val input = params.asJsonInput()
+        val base64String = Base64Downloader.download(input.getString("url"))
+        val response = JSONObject()
+        response.put("base64", base64String)
+        callback(response.toString())
+      } catch (error: Exception) {
+        // an uncaught throw in this scope kills the app
+        callback(JSONObject().put("error", "downloadAsBase64 failed: $error").toString())
+      }
     }
   }
 

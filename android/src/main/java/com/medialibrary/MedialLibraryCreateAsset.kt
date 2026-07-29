@@ -75,7 +75,7 @@ object MedialLibraryCreateAsset {
   ) {
     val localUrl = params.getString("localUrl")
     if (!isFileExtensionPresent(localUrl)) {
-      callback.invoke("E_NO_FILE_EXTENSION", null)
+      callback.invoke(JSONObject().apply { put("error", "E_NO_FILE_EXTENSION") }.toString(), null)
       return
     }
     val uri = normalizeAssetUri(localUrl)
@@ -88,7 +88,7 @@ object MedialLibraryCreateAsset {
         arrayOf(asset!!.path),
         null
       ) { path: String?, newUri: Uri? ->
-        if (newUri == null) return@scanFile callback("E_UNABLE_COPY_FILE_TO_EXTERNAL_STORAGE", null)
+        if (newUri == null) return@scanFile callback(JSONObject().apply { put("error", "E_UNABLE_COPY_FILE_TO_EXTERNAL_STORAGE") }.toString(), null)
         callback(null, ContentUris.parseId(newUri).toString())
       }
     }

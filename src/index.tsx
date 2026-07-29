@@ -158,7 +158,7 @@ const parseNativeResponse = <T,>(response: unknown): ParseResult<T> => {
   if (typeof response !== 'string') {
     return {
       ok: false,
-      error: `unexpected non-string native response: ${JSON.stringify(response)}`,
+      error: `unexpected non-string native response (${typeof response})`,
     };
   }
   if (response.trim() === '') {
@@ -177,16 +177,27 @@ const parseNativeResponse = <T,>(response: unknown): ParseResult<T> => {
     'error' in parsed
   ) {
     const errorPayload = (parsed as { error: unknown }).error;
-    return { ok: false, error: String(errorPayload), errorPayload };
+    let errorText: string;
+    try {
+      errorText = String(errorPayload);
+    } catch {
+      errorText = 'unstringifiable native error payload';
+    }
+    return { ok: false, error: errorText, errorPayload };
   }
   return { ok: true, value: parsed as T };
 };
 
 const resolveOptional =
-  <T,>(resolve: (value: T | undefined) => void) =>
+  <T,>(method: string, resolve: (value: T | undefined) => void) =>
   (response: unknown) => {
     const result = parseNativeResponse<T>(response);
-    resolve(result.ok ? result.value : undefined);
+    if (result.ok) {
+      resolve(result.value);
+    } else {
+      console.warn(`mediaLibrary.${method}: ${result.error}`);
+      resolve(undefined);
+    }
   };
 
 const settleRequired =
@@ -228,7 +239,7 @@ export const mediaLibrary = {
     }
     return new Promise<AssetItem[]>((resolve, reject) => {
       MediaLibrary.getAssets(params, (response) => {
-        // Android answers the null-options early path with a real array
+        // defensive: resolve directly if a native path ever sends a real array
         if (Array.isArray(response)) return resolve(response as AssetItem[]);
         settleRequired<AssetItem[]>('getAssets', resolve, reject)(response);
       });
@@ -261,7 +272,10 @@ export const mediaLibrary = {
 
   getAsset(id: string): Promise<FullAssetItem | undefined> {
     return new Promise<FullAssetItem | undefined>((resolve) => {
-      MediaLibrary.getAsset(id, resolveOptional<FullAssetItem>(resolve));
+      MediaLibrary.getAsset(
+        id,
+        resolveOptional<FullAssetItem>('getAsset', resolve)
+      );
     });
   },
 
@@ -270,7 +284,10 @@ export const mediaLibrary = {
     resultSavePath: string;
   }): Promise<FullAssetItem | undefined> {
     return new Promise<FullAssetItem | undefined>((resolve) => {
-      MediaLibrary.exportVideo(params, resolveOptional<FullAssetItem>(resolve));
+      MediaLibrary.exportVideo(
+        params,
+        resolveOptional<FullAssetItem>('exportVideo', resolve)
+      );
     });
   },
 
@@ -299,7 +316,7 @@ export const mediaLibrary = {
           url: params.url,
           assetId: params.assetId,
         },
-        resolveOptional<Thumbnail>(resolve)
+        resolveOptional<Thumbnail>('fetchVideoFrame', resolve)
       );
     });
   },
@@ -315,7 +332,7 @@ export const mediaLibrary = {
           maximumHeight: params.maximumHeight,
           iosPreferredTimescale: params.iosPreferredTimescale,
         },
-        resolveOptional<Thumbnail[]>(resolve)
+        resolveOptional<Thumbnail[]>('fetchVideoThumbnails', resolve)
       );
     });
   },
@@ -399,7 +416,7 @@ export const mediaLibrary = {
     return new Promise((resolve) => {
       MediaLibrary.downloadAsBase64(
         params,
-        resolveOptional<{ base64: string }>(resolve)
+        resolveOptional<{ base64: string }>('downloadAsBase64', resolve)
       );
     });
   },

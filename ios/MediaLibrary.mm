@@ -162,7 +162,7 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
             NSString *jsonStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
             callback(@[jsonStr]);
         } else {
-            callback(@[json]);
+            callback(@[json ?: @""]);
         }
     }];
 }
