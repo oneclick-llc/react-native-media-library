@@ -131,7 +131,8 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
 // MARK: getAsset
 - (void)getAsset:(NSString *)id callback:(RCTResponseSenderBlock)callback {
     [MediaAssetManager fetchAssetWithIdentifier:id completion:^(NSString * _Nullable json) {
-        callback(@[json]);
+        // nil (asset not found) would crash the array literal
+        callback(@[json ?: @""]);
     }];
 }
 
@@ -405,7 +406,8 @@ dispatch_queue_t defQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DE
     
     dispatch_async(defQueue, ^{
         [Base64Downloader downloadWithUrl:imageUrl completion:^(NSString * _Nullable string) {
-            callback(@[string]);
+            // nil (bad url / failed download) would crash the array literal
+            callback(@[string ?: @""]);
         }];
     });
 }
