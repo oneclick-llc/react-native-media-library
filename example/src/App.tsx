@@ -1,7 +1,16 @@
+import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { mediaLibrary } from 'react-native-media-library';
 
 export default function App() {
+  const [lastResult, setLastResult] = useState('—');
+
+  const report = (label: string, promise: Promise<unknown>) => {
+    promise
+      .then((value) => setLastResult(`${label} resolved: ${JSON.stringify(value)}`))
+      .catch((error) => setLastResult(`${label} rejected: ${String(error)}`));
+  };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
@@ -118,6 +127,51 @@ export default function App() {
       >
         <Text>getAsset+fetchVideoThumbnails</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => {
+          report('getAsset(nonexistent id)', mediaLibrary.getAsset('99999999'));
+        }}
+      >
+        <Text>getAsset (nonexistent id)</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => {
+          report(
+            'fetchVideoFrame(bogus)',
+            mediaLibrary.fetchVideoFrame({
+              url: 'file:///bogus/nonexistent.mp4',
+              assetId: '99999999',
+            })
+          );
+        }}
+      >
+        <Text>fetchVideoFrame (bogus)</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => {
+          report(
+            'frame→saveToLibrary',
+            (async () => {
+              const assets = await mediaLibrary.getAssets({
+                mediaType: ['video'],
+              });
+              const videoAsset = assets.find(
+                (asset) => asset.mediaType === 'video'
+              );
+              if (!videoAsset) return 'no video asset on device';
+              const frame = await mediaLibrary.fetchVideoFrame({
+                url: videoAsset.uri,
+                assetId: videoAsset.id,
+              });
+              if (!frame?.url) return 'no frame extracted';
+              return mediaLibrary.saveToLibrary({ localUrl: frame.url });
+            })()
+          );
+        }}
+      >
+        <Text>frame→saveToLibrary</Text>
+      </TouchableOpacity>
+      <Text style={styles.result}>{lastResult}</Text>
     </View>
   );
 }
@@ -132,5 +186,10 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     marginVertical: 20,
+  },
+  result: {
+    marginTop: 24,
+    marginHorizontal: 16,
+    textAlign: 'center',
   },
 });
