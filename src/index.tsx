@@ -147,6 +147,63 @@ const prepareImage = (image: ImagesTypes): string => {
   return Image.resolveAssetSource(image).uri;
 };
 
+type ParseResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: string; errorPayload?: unknown };
+
+// Native modules invoke these callbacks synchronously from the bridge; a throw
+// here cannot be caught by consumers and takes the app down as a fatal
+// JavascriptException. Every response must therefore be parsed defensively.
+const parseNativeResponse = <T,>(response: unknown): ParseResult<T> => {
+  if (typeof response !== 'string') {
+    return {
+      ok: false,
+      error: `unexpected non-string native response: ${JSON.stringify(response)}`,
+    };
+  }
+  if (response.trim() === '') {
+    return { ok: false, error: 'empty native response' };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(response);
+  } catch {
+    return { ok: false, error: `malformed native response: ${response}` };
+  }
+  if (
+    parsed !== null &&
+    typeof parsed === 'object' &&
+    !Array.isArray(parsed) &&
+    'error' in parsed
+  ) {
+    const errorPayload = (parsed as { error: unknown }).error;
+    return { ok: false, error: String(errorPayload), errorPayload };
+  }
+  return { ok: true, value: parsed as T };
+};
+
+const resolveOptional =
+  <T,>(resolve: (value: T | undefined) => void) =>
+  (response: unknown) => {
+    const result = parseNativeResponse<T>(response);
+    resolve(result.ok ? result.value : undefined);
+  };
+
+const settleRequired =
+  <T,>(
+    method: string,
+    resolve: (value: T) => void,
+    reject: (reason?: unknown) => void
+  ) =>
+  (response: unknown) => {
+    const result = parseNativeResponse<T>(response);
+    if (result.ok) {
+      resolve(result.value);
+    } else {
+      reject(new Error(`mediaLibrary.${method}: ${result.error}`));
+    }
+  };
+
 export const mediaLibrary = {
   get cacheDir(): string {
     return MediaLibrary.cacheDir().replace(/\/$/, '');
@@ -169,17 +226,19 @@ export const mediaLibrary = {
         'limit parameter must be present in order to make a pagination'
       );
     }
-    return new Promise<AssetItem[]>((resolve) => {
-      MediaLibrary.getAssets(params, (response) =>
-        resolve(JSON.parse(response))
-      );
+    return new Promise<AssetItem[]>((resolve, reject) => {
+      MediaLibrary.getAssets(params, (response) => {
+        // Android answers the null-options early path with a real array
+        if (Array.isArray(response)) return resolve(response as AssetItem[]);
+        settleRequired<AssetItem[]>('getAssets', resolve, reject)(response);
+      });
     });
   },
   getFromDisk(options: {
     path: string;
     extensions?: string[];
   }): Promise<DiskAssetItem[]> {
-    return new Promise<DiskAssetItem[]>((resolve) => {
+    return new Promise<DiskAssetItem[]>((resolve, reject) => {
       MediaLibrary.getFromDisk(
         {
           ...options,
@@ -187,20 +246,22 @@ export const mediaLibrary = {
             ? options.extensions.join(',')
             : undefined,
         },
-        (response) => resolve(JSON.parse(response))
+        settleRequired<DiskAssetItem[]>('getFromDisk', resolve, reject)
       );
     });
   },
 
   getCollections(): Promise<CollectionItem[]> {
-    return new Promise<CollectionItem[]>((resolve) => {
-      MediaLibrary.getCollections((response) => resolve(JSON.parse(response)));
+    return new Promise<CollectionItem[]>((resolve, reject) => {
+      MediaLibrary.getCollections(
+        settleRequired<CollectionItem[]>('getCollections', resolve, reject)
+      );
     });
   },
 
   getAsset(id: string): Promise<FullAssetItem | undefined> {
     return new Promise<FullAssetItem | undefined>((resolve) => {
-      MediaLibrary.getAsset(id, (response) => resolve(JSON.parse(response)));
+      MediaLibrary.getAsset(id, resolveOptional<FullAssetItem>(resolve));
     });
   },
 
@@ -209,20 +270,21 @@ export const mediaLibrary = {
     resultSavePath: string;
   }): Promise<FullAssetItem | undefined> {
     return new Promise<FullAssetItem | undefined>((resolve) => {
-      MediaLibrary.exportVideo(params, (response) =>
-        resolve(JSON.parse(response))
-      );
+      MediaLibrary.exportVideo(params, resolveOptional<FullAssetItem>(resolve));
     });
   },
 
   saveToLibrary(params: SaveToLibrary) {
     return new Promise<AssetItem>((resolve, reject) => {
       MediaLibrary.saveToLibrary(params, (response) => {
-        const parsed = JSON.parse(response);
-        if ('error' in parsed) {
-          reject(parsed.error);
+        const result = parseNativeResponse<AssetItem>(response);
+        if (result.ok) {
+          resolve(result.value);
+        } else if (result.errorPayload !== undefined) {
+          // preserve the historical rejection value for {"error": ...} payloads
+          reject(result.errorPayload);
         } else {
-          resolve(parsed);
+          reject(new Error(`mediaLibrary.saveToLibrary: ${result.error}`));
         }
       });
     });
@@ -237,7 +299,7 @@ export const mediaLibrary = {
           url: params.url,
           assetId: params.assetId,
         },
-        (response) => resolve(JSON.parse(response))
+        resolveOptional<Thumbnail>(resolve)
       );
     });
   },
@@ -253,7 +315,7 @@ export const mediaLibrary = {
           maximumHeight: params.maximumHeight,
           iosPreferredTimescale: params.iosPreferredTimescale,
         },
-        (response) => resolve(JSON.parse(response))
+        resolveOptional<Thumbnail[]>(resolve)
       );
     });
   },
@@ -264,7 +326,7 @@ export const mediaLibrary = {
     readonly mainImageIndex?: number;
     readonly backgroundColor?: ColorValue | undefined;
   }) {
-    return new Promise<{ result: boolean }>((resolve) => {
+    return new Promise<{ result: boolean }>((resolve, reject) => {
       const images = params.images.map((img) =>
         typeof img === 'object' ? img : { image: img }
       );
@@ -277,13 +339,13 @@ export const mediaLibrary = {
             ? processColor(params.backgroundColor)
             : processColor('transparent')) as any,
         },
-        (response) => resolve(JSON.parse(response))
+        settleRequired<{ result: boolean }>('combineImages', resolve, reject)
       );
     });
   },
 
   imageResize(params: ImageResizeParams) {
-    return new Promise<{ result: boolean }>((resolve) => {
+    return new Promise<{ result: boolean }>((resolve, reject) => {
       MediaLibrary.imageResize(
         {
           uri: prepareImage(params.uri),
@@ -292,20 +354,20 @@ export const mediaLibrary = {
           height: params.height ?? -1,
           width: params.width ?? -1,
         },
-        (response) => resolve(JSON.parse(response))
+        settleRequired<{ result: boolean }>('imageResize', resolve, reject)
       );
     });
   },
 
   imageCrop(params: ImageCropParams) {
-    return new Promise<{ result: boolean }>((resolve) => {
+    return new Promise<{ result: boolean }>((resolve, reject) => {
       MediaLibrary.imageCrop(
         {
           ...params,
           uri: prepareImage(params.uri) as string,
           format: params.format ?? 'png',
         },
-        (response) => resolve(JSON.parse(response))
+        settleRequired<{ result: boolean }>('imageCrop', resolve, reject)
       );
     });
   },
@@ -317,10 +379,16 @@ export const mediaLibrary = {
       size: number;
     }[]
   > {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       MediaLibrary.imageSizes(
         { images: prepareImages(params.images) },
-        (response) => resolve(JSON.parse(response))
+        settleRequired<
+          {
+            width: number;
+            height: number;
+            size: number;
+          }[]
+        >('imageSizes', resolve, reject)
       );
     });
   },
@@ -329,8 +397,9 @@ export const mediaLibrary = {
     url: string;
   }): Promise<{ base64: string } | undefined> {
     return new Promise((resolve) => {
-      MediaLibrary.downloadAsBase64(params, (response) =>
-        resolve(JSON.parse(response))
+      MediaLibrary.downloadAsBase64(
+        params,
+        resolveOptional<{ base64: string }>(resolve)
       );
     });
   },
